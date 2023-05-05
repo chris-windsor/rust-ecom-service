@@ -1,0 +1,11 @@
+[package]
+name = "lemon-tree"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]
+members = [".", "api", "core", "entity", "migration"]
+
+[dependencies]
+lemon-tree-api = { path = "api" }
