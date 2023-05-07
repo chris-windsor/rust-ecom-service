@@ -1,25 +1,29 @@
-use std::sync::Arc;
-
+use crate::{
+    handler::{
+        all_products, change_password_handler, create_product, get_me_handler,
+        health_checker_handler, inquire_password_reset_handler, login_user_handler, logout_handler,
+        register_user_handler,
+    },
+    jwt::auth,
+    AppState,
+};
 use axum::{
     middleware,
     routing::{get, post},
     Router,
 };
-
-use crate::{
-    handler::{
-        all_products, create_product, get_me_handler, health_checker_handler, login_user_handler,
-        logout_handler, register_user_handler,
-    },
-    jwt::auth,
-    AppState,
-};
+use std::sync::Arc;
 
 pub fn create_auth_router(app_state: &Arc<AppState>) -> Router {
     Router::new()
         .route("/api/healthchecker", get(health_checker_handler))
         .route("/api/auth/register", post(register_user_handler))
         .route("/api/auth/login", post(login_user_handler))
+        .route(
+            "/api/auth/inquire_password_reset",
+            post(inquire_password_reset_handler),
+        )
+        .route("/api/auth/change_password", post(change_password_handler))
         .route(
             "/api/auth/logout",
             get(logout_handler)

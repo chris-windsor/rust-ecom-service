@@ -15,8 +15,11 @@ use http::{
 use lemon_tree_core::sea_orm::{Database, DatabaseConnection};
 use migration::{Migrator, MigratorTrait};
 use route::{create_auth_router, create_product_router};
-use std::{env, net::SocketAddr, sync::Arc};
-use tower_http::cors::CorsLayer;
+use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
+use tokio::sync::Mutex;
+use tower::ServiceBuilder;
+use tower_http::{add_extension::AddExtensionLayer, cors::CorsLayer};
+use uuid::Uuid;
 
 #[tokio::main]
 async fn start() -> anyhow::Result<()> {
@@ -49,6 +52,11 @@ async fn start() -> anyhow::Result<()> {
 
     let app = create_auth_router(&app_state)
         .merge(create_product_router(&app_state))
+        .layer(
+            ServiceBuilder::new()
+                .layer(AddExtensionLayer::new(SharedState::default()))
+                .into_inner(),
+        )
         .layer(cors);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 4567));
@@ -61,6 +69,32 @@ async fn start() -> anyhow::Result<()> {
 pub struct AppState {
     db: DatabaseConnection,
     env: Config,
+}
+
+type SharedState = Arc<Mutex<State>>;
+
+#[derive(Default)]
+pub struct State {
+    reset_tokens: ResetTokenDB,
+}
+
+#[derive(Default)]
+pub struct ResetTokenDB {
+    tokens: HashMap<String, Uuid>,
+}
+
+impl ResetTokenDB {
+    fn add_token(&mut self, token: String, email: Uuid) {
+        self.tokens.insert(token, email);
+    }
+
+    fn get_token(&self, token: &String) -> Option<&Uuid> {
+        self.tokens.get(token)
+    }
+
+    fn remove_token(&mut self, token: &String) {
+        self.tokens.remove(&token.to_owned());
+    }
 }
 
 pub fn main() {

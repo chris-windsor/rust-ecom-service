@@ -1,8 +1,18 @@
-use std::sync::Arc;
-
+use crate::{
+    model::{
+        InquirePasswordResetSchema, LoginUserSchema, RegisterUserSchema, ResetPasswordSchema,
+        TokenClaims,
+    },
+    response::{FilteredProduct, FilteredUser},
+    AppState, SharedState,
+};
 use argon2::{
     password_hash::{rand_core, SaltString},
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
+};
+use aws_sdk_sesv2::{
+    types::{Body, Content, Destination, EmailContent, Message},
+    Client,
 };
 use axum::{
     extract::{Query, State},
@@ -14,20 +24,14 @@ use axum_extra::extract::cookie::{Cookie, SameSite};
 use entity::{prelude::*, *};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use lemon_tree_core::{
-    sea_orm::{ActiveValue, ColumnTrait, EntityTrait, QueryFilter},
+    sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, QueryFilter},
     Query as QueryCore,
 };
 use rand_core::OsRng;
 use serde::Deserialize;
 use serde_json::json;
+use std::sync::Arc;
 use uuid::Uuid;
-
-use crate::{
-    model::{LoginUserSchema, RegisterUserSchema, TokenClaims},
-    response::FilteredProduct,
-    response::FilteredUser,
-    AppState,
-};
 
 fn filter_user_record(user: &account::Model) -> FilteredUser {
     FilteredUser {
@@ -152,11 +156,13 @@ pub async fn login_user_handler(
 
     let now = chrono::Utc::now();
     let iat = now.timestamp() as usize;
-    let exp = (now + chrono::Duration::minutes(60)).timestamp() as usize;
+    let exp = (now + chrono::Duration::seconds(data.env.jwt_expiry)).timestamp() as usize;
     let claims: TokenClaims = TokenClaims {
         sub: user.id.to_string(),
         exp,
         iat,
+        name: user.name,
+        role: user.role,
     };
 
     let token = encode(
@@ -168,7 +174,7 @@ pub async fn login_user_handler(
 
     let cookie = Cookie::build("token", token.to_owned())
         .path("/")
-        .max_age(time::Duration::hours(1))
+        .max_age(time::Duration::seconds(data.env.jwt_expiry))
         .same_site(SameSite::Lax)
         .http_only(true)
         .finish();
@@ -219,6 +225,135 @@ pub async fn health_checker_handler() -> impl IntoResponse {
     Json(json_response)
 }
 
+pub async fn inquire_password_reset_handler(
+    Extension(state): Extension<SharedState>,
+    State(data): State<Arc<AppState>>,
+    Json(body): Json<InquirePasswordResetSchema>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let user_exists = Account::find()
+        .filter(account::Column::Email.eq(body.email.to_owned().to_ascii_lowercase()))
+        .one(&data.db)
+        .await
+        .map_err(|e| {
+            let error_response = serde_json::json!({
+                "status": "fail",
+                "message": format!("Database error: {}", e),
+            });
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+        })?;
+
+    if let None = user_exists {
+        let error_response = serde_json::json!({
+            "status": "fail",
+            "message": "User with that email could not be found",
+        });
+        return Err((StatusCode::CONFLICT, Json(error_response)));
+    }
+
+    let user = user_exists.unwrap();
+    let reset_token = Uuid::new_v4().to_string();
+    state
+        .lock()
+        .await
+        .reset_tokens
+        .add_token(reset_token.clone(), user.id);
+
+    let config = aws_config::load_from_env().await;
+    let client = Client::new(&config);
+    let dest = Destination::builder()
+        .to_addresses("success@simulator.amazonses.com")
+        .build();
+    let subject_content = Content::builder()
+        .data("Password Reset Inquiry")
+        .charset("UTF-8")
+        .build();
+    let body_content = Content::builder()
+        .data("Reset your password here: ")
+        .charset("UTF-8")
+        .build();
+    let body = Body::builder().text(body_content).build();
+
+    let msg = Message::builder()
+        .subject(subject_content)
+        .body(body)
+        .build();
+
+    let email_content = EmailContent::builder().simple(msg).build();
+
+    let _ = client
+        .send_email()
+        .from_email_address("awstest@chriswindsor.dev")
+        .destination(dest)
+        .content(email_content)
+        .send()
+        .await;
+
+    let json_response = serde_json::json!({
+        "status":  "success",
+        "data": {
+            "message": "Check your email for a link to reset your password",
+            "token": reset_token
+        }
+    });
+
+    Ok(Json(json_response))
+}
+
+pub async fn change_password_handler(
+    Extension(state): Extension<SharedState>,
+    State(data): State<Arc<AppState>>,
+    Json(body): Json<ResetPasswordSchema>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let mut other_state = state.lock().await;
+    let user_id: Uuid;
+
+    if let Some(value) = other_state.reset_tokens.get_token(&body.token) {
+        user_id = value.clone();
+    } else {
+        let error_response = serde_json::json!({
+            "status": "fail",
+            "message": "Invalid reset token provided",
+        });
+        return Err((StatusCode::CONFLICT, Json(error_response)));
+    }
+
+    let salt = SaltString::generate(&mut OsRng);
+    let hashed_password = Argon2::default()
+        .hash_password(body.password.as_bytes(), &salt)
+        .map_err(|e| {
+            let error_response = serde_json::json!({
+                "status": "fail",
+                "message": format!("Error while hashing password: {}", e),
+            });
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+        })
+        .map(|hash| hash.to_string())?;
+
+    let updated_account = account::ActiveModel {
+        id: ActiveValue::Set(user_id),
+        password: ActiveValue::Set(hashed_password),
+        ..Default::default()
+    };
+
+    let _ = updated_account.update(&data.db).await.map_err(|e| {
+        let error_response = serde_json::json!({
+            "status": "fail",
+            "message": format!("Database error: {}", e),
+        });
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+    });
+
+    other_state.reset_tokens.remove_token(&body.token);
+
+    let json_response = serde_json::json!({
+        "status":  "success",
+        "data": {
+            "message": "Password has been successfully changed",
+        }
+    });
+
+    Ok(Json(json_response))
+}
 #[derive(Deserialize)]
 pub struct Params {
     page: Option<u64>,

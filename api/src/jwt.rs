@@ -69,6 +69,19 @@ pub async fn auth<B>(
     })?
     .claims;
 
+    // TODO: I did not want to write this and I hope to remove it
+    // The block above should be returning the errors from the validation
+    // but its not...
+    let now = chrono::Utc::now();
+    let now = now.timestamp() as usize;
+    if claims.exp < now {
+        let json_error = ErrorResponse {
+            status: "Authentication Error",
+            message: "Request provided an expired token".to_string(),
+        };
+        return Err((StatusCode::UNAUTHORIZED, Json(json_error)));
+    }
+
     let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| {
         let json_error = ErrorResponse {
             status: "Authentication Error",

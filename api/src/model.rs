@@ -5,6 +5,8 @@ pub struct TokenClaims {
     pub sub: String,
     pub iat: usize,
     pub exp: usize,
+    pub name: String,
+    pub role: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -17,5 +19,16 @@ pub struct RegisterUserSchema {
 #[derive(Debug, Deserialize)]
 pub struct LoginUserSchema {
     pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct InquirePasswordResetSchema {
+    pub email: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResetPasswordSchema {
+    pub token: String,
     pub password: String,
 }
