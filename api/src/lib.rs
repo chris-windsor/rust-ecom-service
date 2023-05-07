@@ -1,4 +1,5 @@
 mod config;
+mod email;
 mod handler;
 mod jwt;
 mod model;
@@ -40,7 +41,11 @@ async fn start() -> anyhow::Result<()> {
     Migrator::up(&conn, None).await.unwrap();
 
     let cors = CorsLayer::new()
-        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
+        .allow_origin(
+            format!("http://{}", config.web_host)
+                .parse::<HeaderValue>()
+                .unwrap(),
+        )
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
         .allow_credentials(true)
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
@@ -76,6 +81,7 @@ type SharedState = Arc<Mutex<State>>;
 #[derive(Default)]
 pub struct State {
     reset_tokens: ResetTokenDB,
+    reset_requests: ResetRequestDB,
 }
 
 #[derive(Default)]
@@ -94,6 +100,21 @@ impl ResetTokenDB {
 
     fn remove_token(&mut self, token: &String) {
         self.tokens.remove(&token.to_owned());
+    }
+}
+
+#[derive(Default)]
+pub struct ResetRequestDB {
+    requests: HashMap<String, usize>,
+}
+
+impl ResetRequestDB {
+    fn add_request(&mut self, email: String, time: usize) {
+        self.requests.insert(email, time);
+    }
+
+    fn get_request(&self, email: &String) -> Option<&usize> {
+        self.requests.get(email)
     }
 }
 

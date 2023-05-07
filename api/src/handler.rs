@@ -1,4 +1,5 @@
 use crate::{
+    email::send_password_reset_email,
     model::{
         InquirePasswordResetSchema, LoginUserSchema, RegisterUserSchema, ResetPasswordSchema,
         TokenClaims,
@@ -9,10 +10,6 @@ use crate::{
 use argon2::{
     password_hash::{rand_core, SaltString},
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
-};
-use aws_sdk_sesv2::{
-    types::{Body, Content, Destination, EmailContent, Message},
-    Client,
 };
 use axum::{
     extract::{Query, State},
@@ -51,6 +48,8 @@ fn filter_product_record(product: &product::Model) -> FilteredProduct {
         stock: product.stock.to_owned(),
     }
 }
+
+const PASSWWORD_RESET_REQUEST_DELAY: usize = 3600;
 
 pub async fn register_user_handler(
     State(data): State<Arc<AppState>>,
@@ -251,48 +250,37 @@ pub async fn inquire_password_reset_handler(
     }
 
     let user = user_exists.unwrap();
+    let mut db_state = state.lock().await;
+    let now = chrono::Utc::now();
+    let now = now.timestamp() as usize;
+
+    if let Some(req_time) = db_state.reset_requests.get_request(&user.email) {
+        if (req_time + PASSWWORD_RESET_REQUEST_DELAY) > now {
+            let error_response = serde_json::json!({
+                "status": "fail",
+                "message": "A previous reset request has occured too recently",
+            });
+            return Err((StatusCode::CONFLICT, Json(error_response)));
+        }
+    }
+
     let reset_token = Uuid::new_v4().to_string();
-    state
-        .lock()
-        .await
+    db_state
         .reset_tokens
         .add_token(reset_token.clone(), user.id);
+    db_state.reset_requests.add_request(user.email.clone(), now);
 
-    let config = aws_config::load_from_env().await;
-    let client = Client::new(&config);
-    let dest = Destination::builder()
-        .to_addresses("success@simulator.amazonses.com")
-        .build();
-    let subject_content = Content::builder()
-        .data("Password Reset Inquiry")
-        .charset("UTF-8")
-        .build();
-    let body_content = Content::builder()
-        .data("Reset your password here: ")
-        .charset("UTF-8")
-        .build();
-    let body = Body::builder().text(body_content).build();
-
-    let msg = Message::builder()
-        .subject(subject_content)
-        .body(body)
-        .build();
-
-    let email_content = EmailContent::builder().simple(msg).build();
-
-    let _ = client
-        .send_email()
-        .from_email_address("awstest@chriswindsor.dev")
-        .destination(dest)
-        .content(email_content)
-        .send()
-        .await;
+    let reset_url = format!(
+        "http://{}/auth/resetpassword?token={}",
+        &data.env.web_host, reset_token
+    );
+    let reset_email_content = format!("<a href='{}'>Reset your password</a>", reset_url);
+    send_password_reset_email(&user.email, &reset_email_content).await;
 
     let json_response = serde_json::json!({
         "status":  "success",
         "data": {
             "message": "Check your email for a link to reset your password",
-            "token": reset_token
         }
     });
 
