@@ -4,6 +4,7 @@ use crate::{
         InquirePasswordResetSchema, LoginUserSchema, RegisterUserSchema, ResetPasswordSchema,
         TokenClaims,
     },
+    priveleges::check_admin,
     response::{FilteredProduct, FilteredUser},
     AppState, SharedState,
 };
@@ -135,8 +136,6 @@ pub async fn login_user_handler(
             });
             (StatusCode::BAD_REQUEST, Json(error_response))
         })?;
-
-    println!("{:?}", user);
 
     let is_valid = match PasswordHash::new(&user.password) {
         Ok(parsed_hash) => Argon2::default()
@@ -365,9 +364,14 @@ pub async fn all_products(
 }
 
 pub async fn create_product(
+    Extension(user): Extension<account::Model>,
     State(data): State<Arc<AppState>>,
     Json(new_product): Json<FilteredProduct>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    if let Err(error) = check_admin(&user) {
+        return Err(error);
+    }
+
     let new_product = product::ActiveModel {
         id: ActiveValue::Set(Uuid::new_v4()),
         name: ActiveValue::set(new_product.name),

@@ -39,7 +39,11 @@ pub fn create_auth_router(app_state: &Arc<AppState>) -> Router {
 
 pub fn create_product_router(app_state: &Arc<AppState>) -> Router {
     Router::new()
-        .route("/products", get(all_products))
-        .route("/product", post(create_product))
+        .route("/api/products", get(all_products))
+        .route(
+            "/api/product",
+            post(create_product)
+                .route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
+        )
         .with_state(app_state.to_owned())
 }

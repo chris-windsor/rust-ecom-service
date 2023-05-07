@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use crate::{model::TokenClaims, AppState};
 use axum::{
     extract::State,
     http::{header, Request, StatusCode},
@@ -7,15 +6,13 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-
 use axum_extra::extract::cookie::CookieJar;
+use entity::{prelude::*, *};
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use lemon_tree_core::sea_orm;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde::Serialize;
-
-use crate::{model::TokenClaims, AppState};
-use entity::{prelude::*, *};
+use std::sync::Arc;
 
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
