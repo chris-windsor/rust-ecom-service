@@ -6,6 +6,7 @@ mod model;
 mod priveleges;
 mod response;
 mod route;
+mod storage;
 
 use axum::Server;
 use config::Config;

@@ -2,7 +2,7 @@ use crate::{
     handler::{
         all_products, change_password_handler, create_product, get_me_handler,
         health_checker_handler, inquire_password_reset_handler, login_user_handler, logout_handler,
-        register_user_handler,
+        register_user_handler, upload_file,
     },
     jwt::auth,
     AppState,
@@ -44,6 +44,10 @@ pub fn create_product_router(app_state: &Arc<AppState>) -> Router {
             "/api/product",
             post(create_product)
                 .route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
+        )
+        .route(
+            "/api/upload_file",
+            post(upload_file).route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
         )
         .with_state(app_state.to_owned())
 }

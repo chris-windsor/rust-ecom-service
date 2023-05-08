@@ -6,6 +6,7 @@ use crate::{
     },
     priveleges::check_admin,
     response::{FilteredProduct, FilteredUser},
+    storage::upload_object,
     AppState, SharedState,
 };
 use argon2::{
@@ -13,7 +14,7 @@ use argon2::{
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
 };
 use axum::{
-    extract::{Query, State},
+    extract::{Multipart, Query, State},
     http::{header, Response, StatusCode},
     response::IntoResponse,
     Extension, Json,
@@ -28,7 +29,7 @@ use lemon_tree_core::{
 use rand_core::OsRng;
 use serde::Deserialize;
 use serde_json::json;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 use uuid::Uuid;
 
 fn filter_user_record(user: &account::Model) -> FilteredUser {
@@ -393,6 +394,38 @@ pub async fn create_product(
 
     let user_response = serde_json::json!({"status": "success","data": serde_json::json!({
         "product": filter_product_record(&product)
+    })});
+
+    Ok(Json(user_response))
+}
+
+pub async fn upload_file(
+    Extension(user): Extension<account::Model>,
+    mut files: Multipart,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    if let Err(error) = check_admin(&user) {
+        return Err(error);
+    }
+
+    let mut file_locations: HashSet<String> = HashSet::new();
+
+    while let Some(file) = files.next_field().await.unwrap() {
+        let file_name = file.file_name().unwrap();
+        let file_ext = file_name
+            .split(".")
+            .collect::<Vec<&str>>()
+            .pop()
+            .unwrap()
+            .to_owned();
+        let data = file.bytes().await.unwrap();
+
+        let s3_resp = upload_object(file_ext, data.into()).await.unwrap();
+
+        file_locations.insert(s3_resp);
+    }
+
+    let user_response = serde_json::json!({"status": "success","data": serde_json::json!({
+        "files": file_locations
     })});
 
     Ok(Json(user_response))
