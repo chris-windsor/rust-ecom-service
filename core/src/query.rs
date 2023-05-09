@@ -1,4 +1,5 @@
 use ::entity::{product, product::Entity as Product};
+use ::entity::{product_image, product_image::Entity as ProductImage};
 use sea_orm::{prelude::Uuid, *};
 
 pub struct Query;
@@ -15,8 +16,9 @@ impl Query {
         db: &DbConn,
         page: u64,
         posts_per_page: u64,
-    ) -> Result<(Vec<product::Model>, u64), DbErr> {
+    ) -> Result<(Vec<(product::Model, Option<product_image::Model>)>, u64), DbErr> {
         let paginator = Product::find()
+            .find_also_related(ProductImage)
             .order_by_asc(product::Column::Id)
             .paginate(db, posts_per_page);
         let num_pages = paginator.num_pages().await?;

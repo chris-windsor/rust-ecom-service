@@ -13,17 +13,16 @@ pub struct FilteredProduct {
     pub id: String,
     pub name: String,
     pub description: String,
-    pub price: rust_decimal::Decimal,
+    pub price: f32,
     pub stock: i32,
 }
 
-#[derive(Debug, Serialize)]
-pub struct UserData {
-    pub user: FilteredUser,
-}
-
-#[derive(Debug, Serialize)]
-pub struct UserResponse {
-    pub status: String,
-    pub data: UserData,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ProductGridImage {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub price: f32,
+    pub stock: i32,
+    pub img: String,
 }

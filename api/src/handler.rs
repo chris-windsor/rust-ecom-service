@@ -5,8 +5,9 @@ use crate::{
         TokenClaims,
     },
     priveleges::check_admin,
-    response::{FilteredProduct, FilteredUser},
-    storage::upload_object,
+    request::NewProduct,
+    response::{FilteredProduct, FilteredUser, ProductGridImage},
+    storage::upload_image,
     AppState, SharedState,
 };
 use argon2::{
@@ -27,6 +28,7 @@ use lemon_tree_core::{
     Query as QueryCore,
 };
 use rand_core::OsRng;
+use rust_decimal::Decimal;
 use serde::Deserialize;
 use serde_json::json;
 use std::{collections::HashSet, sync::Arc};
@@ -46,7 +48,7 @@ fn filter_product_record(product: &product::Model) -> FilteredProduct {
         id: product.id.to_string(),
         name: product.name.to_owned(),
         description: product.description.to_owned(),
-        price: product.price.to_owned(),
+        price: product.price.to_string().parse::<f32>().unwrap(),
         stock: product.stock.to_owned(),
     }
 }
@@ -359,7 +361,23 @@ pub async fn all_products(
         .await
         .expect("Cannot find products in page");
 
-    let response = json!({"products": products, "pageCount": num_pages});
+    let response = json!({"products": products.iter().map(|product_and_image| {
+        let (product, product_image): &(entity::product::Model, std::option::Option<entity::product_image::Model>) = product_and_image;
+
+        let mut image_hash: String = String::new();
+        if let Some(image_data) = product_image {
+            image_hash = image_data.id.to_string();
+        }
+
+        ProductGridImage { 
+            id: product.id.to_string(),
+            name: product.name.to_owned(),
+            description: product.description.to_owned(),
+            price: product.price.to_string().parse::<f32>().unwrap(),
+            stock: product.stock.to_owned(),
+            img: image_hash
+        }
+    }).collect::<Vec<ProductGridImage>>(), "pageCount": num_pages});
 
     Ok(Json(response))
 }
@@ -367,7 +385,7 @@ pub async fn all_products(
 pub async fn create_product(
     Extension(user): Extension<account::Model>,
     State(data): State<Arc<AppState>>,
-    Json(new_product): Json<FilteredProduct>,
+    Json(req_product): Json<NewProduct>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     if let Err(error) = check_admin(&user) {
         return Err(error);
@@ -375,13 +393,32 @@ pub async fn create_product(
 
     let new_product = product::ActiveModel {
         id: ActiveValue::Set(Uuid::new_v4()),
-        name: ActiveValue::set(new_product.name),
-        description: ActiveValue::set(new_product.description),
-        price: ActiveValue::set(new_product.price),
-        stock: ActiveValue::set(new_product.stock),
+        name: ActiveValue::set(req_product.name),
+        description: ActiveValue::set(req_product.description),
+        price: ActiveValue::set(Decimal::from_f32_retain(req_product.price).unwrap()),
+        stock: ActiveValue::set(req_product.stock),
     };
 
     let product = Product::insert(new_product)
+        .exec_with_returning(&data.db)
+        .await
+        .map_err(|e| {
+            let error_response = serde_json::json!({
+                "status": "fail",
+                "message": format!("Database error: {}", e),
+            });
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+        })?;
+
+    let product_image_hash = req_product.image_id;
+
+    let new_product_image = product_image::ActiveModel {
+        id: ActiveValue::Set(Uuid::parse_str(&product_image_hash).unwrap()),
+        product_id: ActiveValue::Set(product.id),
+        position: ActiveValue::Set(1),
+    };
+
+    let _product_image = ProductImage::insert(new_product_image)
         .exec_with_returning(&data.db)
         .await
         .map_err(|e| {
@@ -399,7 +436,7 @@ pub async fn create_product(
     Ok(Json(user_response))
 }
 
-pub async fn upload_file(
+pub async fn upload_product_image(
     Extension(user): Extension<account::Model>,
     mut files: Multipart,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
@@ -410,16 +447,9 @@ pub async fn upload_file(
     let mut file_locations: HashSet<String> = HashSet::new();
 
     while let Some(file) = files.next_field().await.unwrap() {
-        let file_name = file.file_name().unwrap();
-        let file_ext = file_name
-            .split(".")
-            .collect::<Vec<&str>>()
-            .pop()
-            .unwrap()
-            .to_owned();
         let data = file.bytes().await.unwrap();
 
-        let s3_resp = upload_object(file_ext, data.into()).await.unwrap();
+        let s3_resp = upload_image(data.into()).await.unwrap();
 
         file_locations.insert(s3_resp);
     }

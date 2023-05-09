@@ -4,25 +4,29 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
-#[sea_orm(table_name = "product")]
+#[sea_orm(table_name = "product_image")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
-    pub name: String,
-    pub description: String,
-    pub price: Decimal,
-    pub stock: i32,
+    pub product_id: Uuid,
+    pub position: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::product_image::Entity")]
-    ProductImage,
+    #[sea_orm(
+        belongs_to = "super::product::Entity",
+        from = "Column::ProductId",
+        to = "super::product::Column::Id",
+        on_update = "NoAction",
+        on_delete = "NoAction"
+    )]
+    Product,
 }
 
-impl Related<super::product_image::Entity> for Entity {
+impl Related<super::product::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::ProductImage.def()
+        Relation::Product.def()
     }
 }
 

@@ -4,3 +4,4 @@ pub mod prelude;
 
 pub mod account;
 pub mod product;
+pub mod product_image;

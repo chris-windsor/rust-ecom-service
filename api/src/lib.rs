@@ -4,6 +4,7 @@ mod handler;
 mod jwt;
 mod model;
 mod priveleges;
+mod request;
 mod response;
 mod route;
 mod storage;

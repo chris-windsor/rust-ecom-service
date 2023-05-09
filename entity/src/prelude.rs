@@ -2,3 +2,4 @@
 
 pub use super::account::Entity as Account;
 pub use super::product::Entity as Product;
+pub use super::product_image::Entity as ProductImage;

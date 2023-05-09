@@ -97,7 +97,7 @@ enum Account {
 }
 
 #[derive(Iden)]
-enum Product {
+pub enum Product {
     Table,
     Id,
     Name,

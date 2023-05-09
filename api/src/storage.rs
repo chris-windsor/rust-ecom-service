@@ -6,13 +6,12 @@ use uuid::Uuid;
 
 const BUCKET_NAME: &str = "lemonseeds";
 
-pub async fn upload_object(
-    ext: String,
+pub async fn upload_image(
     body: ByteStream,
 ) -> Result<String, (StatusCode, Json<serde_json::Value>)> {
     let config = aws_config::load_from_env().await;
     let client = Client::new(&config);
-    let file_key = format!("{}.{}", Uuid::new_v4().to_string(), ext);
+    let file_key = Uuid::new_v4().to_string();
     client
         .put_object()
         .bucket(BUCKET_NAME)
