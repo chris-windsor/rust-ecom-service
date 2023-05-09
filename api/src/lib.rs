@@ -16,10 +16,10 @@ use http::{
     header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     HeaderValue, Method,
 };
-use lemon_tree_core::sea_orm::{Database, DatabaseConnection};
+use lemon_tree_core::sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 use migration::{Migrator, MigratorTrait};
 use route::{create_auth_router, create_product_router};
-use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, env, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tower_http::{add_extension::AddExtensionLayer, cors::CorsLayer};
@@ -34,13 +34,10 @@ async fn start() -> anyhow::Result<()> {
     env::set_var("RUST_LOG", "debug");
     tracing_subscriber::fmt::init();
 
-    dotenvy::dotenv().ok();
-    let db_url =
-        env::var("QUALIFIED_DATABASE_URL").expect("QUALIFIED_DATABASE_URL is not set in .env file");
-
-    let conn = Database::connect(db_url)
-        .await
-        .expect("Database connection failed");
+    let conn = match establish_db_conection(&config).await {
+        Ok(connection) => connection,
+        Err(error) => panic!("Error encountered while connecting to DB: {:?}", error),
+    };
     Migrator::up(&conn, None).await.unwrap();
 
     let cors = CorsLayer::new()
@@ -71,6 +68,24 @@ async fn start() -> anyhow::Result<()> {
     Server::bind(&addr).serve(app.into_make_service()).await?;
 
     Ok(())
+}
+
+async fn establish_db_conection(config: &Config) -> Result<DatabaseConnection, DbErr> {
+    let full_database_url = format!(
+        "{}{}",
+        config.database_url.to_owned(),
+        config.database_name.to_owned()
+    );
+    let mut opt = ConnectOptions::new(full_database_url);
+    opt.max_connections(100)
+        .min_connections(5)
+        .connect_timeout(Duration::from_secs(8))
+        .acquire_timeout(Duration::from_secs(8))
+        .idle_timeout(Duration::from_secs(8))
+        .max_lifetime(Duration::from_secs(8));
+
+    let db = Database::connect(opt).await?;
+    Ok(db)
 }
 
 #[derive(Clone)]
