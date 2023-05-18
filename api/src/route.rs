@@ -1,8 +1,8 @@
 use crate::{
     handler::{
         all_products, change_password_handler, create_product, get_me_handler,
-        health_checker_handler, inquire_password_reset_handler, login_user_handler, logout_handler,
-        register_user_handler, upload_product_image,
+        health_checker_handler, inquire_password_reset_handler, list_product, login_user_handler,
+        logout_handler, register_user_handler, upload_product_image,
     },
     jwt::auth,
     AppState,
@@ -40,6 +40,7 @@ pub fn create_auth_router(app_state: &Arc<AppState>) -> Router {
 pub fn create_product_router(app_state: &Arc<AppState>) -> Router {
     Router::new()
         .route("/api/products", get(all_products))
+        .route("/api/product/:product_id", get(list_product))
         .route(
             "/api/product",
             post(create_product)
