@@ -5,13 +5,13 @@ use crate::{
         logout_handler, register_user_handler, upload_product_image,
     },
     jwt::auth,
-    AppState,
 };
 use axum::{
     middleware,
     routing::{get, post},
     Router,
 };
+use lemon_tree_core::AppState;
 use std::sync::Arc;
 
 pub fn create_auth_router(app_state: &Arc<AppState>) -> Router {

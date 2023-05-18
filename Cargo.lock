@@ -1668,6 +1668,7 @@ dependencies = [
  "http",
  "jsonwebtoken",
  "lemon-tree-core",
+ "lemon-tree-plugins",
  "migration",
  "rand",
  "rust_decimal",
@@ -1688,6 +1689,30 @@ dependencies = [
  "entity",
  "sea-orm",
  "tokio",
+]
+
+[[package]]
+name = "lemon-tree-plugins"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "axum-extra",
+ "chrono",
+ "dotenvy",
+ "entity",
+ "http",
+ "jsonwebtoken",
+ "lemon-tree-core",
+ "rand",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "time 0.3.20",
+ "tokio",
+ "tower",
+ "tower-http 0.3.5",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

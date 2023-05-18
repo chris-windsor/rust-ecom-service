@@ -8,7 +8,7 @@ use crate::{
     request::NewProduct,
     response::{FilteredProduct, FilteredUser, ProductGridImage},
     storage::upload_image,
-    AppState, SharedState,
+    SharedState,
 };
 use argon2::{
     password_hash::{rand_core, SaltString},
@@ -25,7 +25,7 @@ use entity::{prelude::*, *};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use lemon_tree_core::{
     sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, QueryFilter},
-    Query as QueryCore,
+    AppState, Query as QueryCore,
 };
 use rand_core::OsRng;
 use rust_decimal::Decimal;

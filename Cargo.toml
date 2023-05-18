@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [workspace]
-members = [".", "api", "core", "entity", "migration"]
+members = [".", "api", "core", "entity", "migration", "plugins"]
 
 [dependencies]
 lemon-tree-api = { path = "api" }

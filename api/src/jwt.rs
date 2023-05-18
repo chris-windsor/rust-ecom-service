@@ -1,4 +1,4 @@
-use crate::{model::TokenClaims, AppState};
+use crate::model::TokenClaims;
 use axum::{
     extract::State,
     http::{header, Request, StatusCode},
@@ -9,7 +9,7 @@ use axum::{
 use axum_extra::extract::cookie::CookieJar;
 use entity::{prelude::*, *};
 use jsonwebtoken::{decode, DecodingKey, Validation};
-use lemon_tree_core::sea_orm;
+use lemon_tree_core::{sea_orm, AppState};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde::Serialize;
 use std::sync::Arc;

@@ -1,4 +1,3 @@
-mod config;
 mod email;
 mod handler;
 mod jwt;
@@ -10,13 +9,16 @@ mod route;
 mod storage;
 
 use axum::Server;
-use config::Config;
 use dotenvy::dotenv;
 use http::{
     header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     HeaderValue, Method,
 };
-use lemon_tree_core::sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
+use lemon_tree_core::{
+    sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr},
+    AppState, Config,
+};
+use lemon_tree_plugins::load_plugin_routers;
 use migration::{Migrator, MigratorTrait};
 use route::{create_auth_router, create_product_router};
 use std::{collections::HashMap, env, net::SocketAddr, sync::Arc, time::Duration};
@@ -55,8 +57,16 @@ async fn start() -> anyhow::Result<()> {
         env: config.clone(),
     });
 
-    let app = create_auth_router(&app_state)
-        .merge(create_product_router(&app_state))
+    let plugin_routers = load_plugin_routers(&app_state);
+
+    let mut app = create_auth_router(&app_state).merge(create_product_router(&app_state));
+
+    // TODO: improve builder of app
+    for router in plugin_routers {
+        app = app.clone().merge(router);
+    }
+
+    app = app
         .layer(
             ServiceBuilder::new()
                 .layer(AddExtensionLayer::new(SharedState::default()))
@@ -86,12 +96,6 @@ async fn establish_db_conection(config: &Config) -> Result<DatabaseConnection, D
 
     let db = Database::connect(opt).await?;
     Ok(db)
-}
-
-#[derive(Clone)]
-pub struct AppState {
-    db: DatabaseConnection,
-    env: Config,
 }
 
 type SharedState = Arc<Mutex<State>>;
