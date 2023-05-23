@@ -7,7 +7,7 @@ use crate::{
     priveleges::check_admin,
     request::NewProduct,
     response::{FilteredProduct, FilteredUser, ProductGridImage},
-    storage::upload_image,
+    storage::{convert_image_to_webp, upload_image},
     SharedState,
 };
 use argon2::{
@@ -499,9 +499,9 @@ pub async fn upload_product_image(
 
     while let Some(file) = files.next_field().await.unwrap() {
         let data = file.bytes().await.unwrap();
+        let image = convert_image_to_webp(data.as_ref()).to_owned();
 
-        let s3_resp = upload_image(data.into()).await.unwrap();
-
+        let s3_resp = upload_image(image).await.unwrap();
         file_locations.insert(s3_resp);
     }
 
