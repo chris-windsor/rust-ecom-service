@@ -46,3 +46,29 @@ pub async fn upload_image(image: Vec<u8>) -> Result<String, (StatusCode, Json<se
 
     Ok(file_key)
 }
+
+pub async fn get_uploaded_images() -> Result<Vec<String>, (StatusCode, Json<serde_json::Value>)> {
+    let config = aws_config::load_from_env().await;
+    let client = Client::new(&config);
+    let images = client
+        .list_objects_v2()
+        .bucket(BUCKET_NAME)
+        .send()
+        .await
+        .map_err(|e| {
+            let error_response = serde_json::json!({
+                "status": "fail",
+                "message": format!("Image listing error: {}", e),
+            });
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+        })?;
+
+    let images = images
+        .contents()
+        .unwrap()
+        .into_iter()
+        .map(|obj| String::from(obj.key().unwrap_or_default()))
+        .collect::<Vec<String>>();
+
+    Ok(images)
+}

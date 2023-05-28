@@ -7,7 +7,7 @@ use crate::{
     priveleges::check_admin,
     request::NewProduct,
     response::{FilteredProduct, FilteredUser, ProductGridImage},
-    storage::{convert_image_to_webp, upload_image},
+    storage::{convert_image_to_webp, get_uploaded_images, upload_image},
     SharedState,
 };
 use argon2::{
@@ -163,7 +163,7 @@ pub async fn login_user_handler(
         exp,
         iat,
         name: user.name,
-        role: user.role,
+        role: user.role.to_string(),
     };
 
     let token = encode(
@@ -173,17 +173,8 @@ pub async fn login_user_handler(
     )
     .unwrap();
 
-    let cookie = Cookie::build("token", token.to_owned())
-        .path("/")
-        .max_age(time::Duration::seconds(data.env.jwt_expiry))
-        .same_site(SameSite::Lax)
-        .http_only(true)
-        .finish();
-
-    let mut response = Response::new(json!({"status": "success", "token": token}).to_string());
-    response
-        .headers_mut()
-        .insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
+    let mut response =
+        Response::new(json!({"status": "success", "token": token, "role": user.role}).to_string());
     Ok(response)
 }
 
@@ -507,6 +498,22 @@ pub async fn upload_product_image(
 
     let user_response = serde_json::json!({"status": "success","data": serde_json::json!({
         "files": file_locations
+    })});
+
+    Ok(Json(user_response))
+}
+
+pub async fn list_uploaded_images(
+    Extension(user): Extension<account::Model>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    if let Err(error) = check_admin(&user) {
+        return Err(error);
+    }
+
+    let file_locations = get_uploaded_images().await.unwrap();
+
+    let user_response = serde_json::json!({"status": "success","data": serde_json::json!({
+        "images": file_locations
     })});
 
     Ok(Json(user_response))
