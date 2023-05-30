@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
 pub struct NewProduct {
     pub name: String,
     pub description: String,
