@@ -6,7 +6,9 @@ use crate::{
             login_user_handler, logout_handler, register_user_handler,
         },
         product::{
-            all_products, create_product, list_product, list_uploaded_images, upload_product_image,
+            all_products, create_attribute, create_category, create_product, list_attributes,
+            list_categories, list_product, list_uploaded_images, retrieve_attribute,
+            retrieve_category, update_attribute, update_category, upload_product_image,
         },
     },
 };
@@ -57,6 +59,30 @@ pub fn create_product_router(app_state: &Arc<AppState>) -> Router {
         .route(
             "/api/list_files",
             get(list_uploaded_images)
+                .route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
+        )
+        .route("/api/product/attributes", get(list_attributes))
+        .route(
+            "/api/product/attribute",
+            post(create_attribute)
+                .route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
+        )
+        .route(
+            "/api/product/attribute/:attribute_id",
+            get(retrieve_attribute)
+                .patch(update_attribute)
+                .route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
+        )
+        .route("/api/product/categories", get(list_categories))
+        .route(
+            "/api/product/category",
+            post(create_category)
+                .route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
+        )
+        .route(
+            "/api/product/catgeory/:category_id",
+            get(retrieve_category)
+                .patch(update_category)
                 .route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
         )
         .with_state(app_state.to_owned())

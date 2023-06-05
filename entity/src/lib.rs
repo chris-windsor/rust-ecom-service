@@ -3,5 +3,10 @@
 pub mod prelude;
 
 pub mod account;
+pub mod attribute;
+pub mod attribute_option;
+pub mod category;
 pub mod product;
+pub mod product_attribute;
+pub mod product_category;
 pub mod product_image;
