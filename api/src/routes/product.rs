@@ -213,14 +213,11 @@ pub async fn create_product(
             (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
         })?;
 
-    // TODO: change this to iterate over all categories applied to product
-    if req_product.categories.len() > 0 {
+    for category in req_product.categories.into_iter() {
         let new_product_category = product_category::ActiveModel {
             id: ActiveValue::NotSet,
             product_id: ActiveValue::set(product.id),
-            category_id: ActiveValue::set(
-                i32::from_u32(req_product.categories.get(0).unwrap().clone()).unwrap(),
-            ),
+            category_id: ActiveValue::set(i32::from_u32(category).unwrap()),
         };
 
         ProductCategory::insert(new_product_category)
