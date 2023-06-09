@@ -18,8 +18,14 @@ impl Query {
         posts_per_page: u64,
     ) -> Result<(Vec<(product::Model, Option<product_image::Model>)>, u64), DbErr> {
         let paginator = Product::find()
+            .select()
+            .column(product::Column::Id)
+            .column(product::Column::ShortUrl)
+            .column(product::Column::Name)
+            .column(product::Column::Price)
+            .column(product::Column::Stock)
             .find_also_related(ProductImage)
-            .order_by_asc(product::Column::Id)
+            .order_by_asc(product::Column::Name)
             .paginate(db, posts_per_page);
         let num_pages = paginator.num_pages().await?;
 

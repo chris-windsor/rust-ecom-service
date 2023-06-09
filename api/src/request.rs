@@ -8,6 +8,7 @@ pub struct NewProduct {
     pub description: String,
     pub price: f32,
     pub categories: Vec<u32>,
+    pub attributes: Vec<u32>,
     pub stock: i32,
     pub image_id: String,
 }

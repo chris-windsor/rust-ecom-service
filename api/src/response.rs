@@ -10,6 +10,16 @@ pub struct FilteredUser {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
+pub struct FilteredSimpleProduct {
+    pub short_url: String,
+    pub name: String,
+    pub price: f32,
+    pub stock: i32,
+    pub img: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all(serialize = "camelCase"))]
 pub struct FilteredProduct {
     pub id: String,
     pub short_url: String,
@@ -19,6 +29,7 @@ pub struct FilteredProduct {
     pub stock: i32,
     pub img: String,
     pub categories: Vec<FilteredCategory>,
+    pub attributes: Vec<FilteredProductAttribute>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -43,4 +54,12 @@ pub struct FilteredCategory {
     pub id: i32,
     pub label: String,
     pub parent_id: i32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FilteredProductAttribute {
+    pub id: i32,
+    pub kind: String,
+    pub label: String,
+    pub content: String,
 }
