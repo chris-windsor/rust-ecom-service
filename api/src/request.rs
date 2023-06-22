@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
@@ -31,4 +32,43 @@ pub struct NewAttribute {
 pub struct NewCategory {
     pub label: String,
     pub parent_id: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub struct CustomerDetails {
+    pub email_address: Arc<str>,
+    pub first_name: Arc<str>,
+    pub last_name: Arc<str>,
+    pub street_address_1: Arc<str>,
+    pub street_address_2: Arc<str>,
+    pub city: Arc<str>,
+    pub state: Arc<str>,
+    pub zip_code: Arc<str>,
+    pub phone_number: Arc<str>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub struct PaymentDetails {
+    pub credit_card_number: Arc<str>,
+    pub credit_card_expiry: Arc<str>,
+    pub credit_card_cvv: Arc<str>,
+    pub credit_card_name: Arc<str>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+
+pub struct OrderItem {
+    pub id: Arc<str>,
+    pub qty: u32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub struct NewOrder {
+    pub customer_details: CustomerDetails,
+    pub payment_details: PaymentDetails,
+    pub order_items: Vec<OrderItem>,
 }

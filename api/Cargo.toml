@@ -9,6 +9,7 @@ lemon-tree-core = { path = "../core" }
 lemon-tree-plugins = { path = "../plugins" }
 anyhow = "1.0.66"
 argon2 = "0.5.0"
+async-stream = "0.3.5"
 aws-config = "0.55.2"
 aws-sdk-sesv2 = "0.27.0"
 aws-sdk-s3 = "0.27.0"
@@ -18,11 +19,14 @@ axum-extra = { version = "0.7.4", features = ["cookie"] }
 chrono = { version = "0.4.24", features = ["serde"] }
 dotenvy = "0.15.6"
 entity = { path = "../entity" }
+futures = "0.3.28"
 http = "0.2.9"
 image = "0.24.6"
 jsonwebtoken = "8.3.0"
+lazy_static = "1.4.0"
 migration = { path = "../migration" }
 rand = "0.8.5"
+reqwest = { version = "0.11.18", features = ["json"] }
 rust_decimal = { version = "1.29.1", features = ["serde", "serde-float"] }
 serde = "1.0.149"
 serde_json = "1.0.89"

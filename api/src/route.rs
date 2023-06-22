@@ -5,6 +5,7 @@ use crate::{
             change_password_handler, get_me_handler, inquire_password_reset_handler,
             login_user_handler, logout_handler, register_user_handler,
         },
+        orders::{list_orders, live_order_events, process_order},
         product::{
             all_products, create_attribute, create_category, create_product, list_attributes,
             list_categories, list_product, list_uploaded_images, retrieve_attribute,
@@ -83,6 +84,21 @@ pub fn create_product_router(app_state: &Arc<AppState>) -> Router {
             "/api/product/catgeory/:category_id",
             get(retrieve_category)
                 .patch(update_category)
+                .route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
+        )
+        .with_state(app_state.to_owned())
+}
+
+pub fn create_order_router(app_state: &Arc<AppState>) -> Router {
+    Router::new()
+        .route("/api/process_order", post(process_order))
+        .route(
+            "/api/list_orders",
+            get(list_orders).route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
+        )
+        .route(
+            "/api/live_order_events",
+            get(live_order_events)
                 .route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
         )
         .with_state(app_state.to_owned())
