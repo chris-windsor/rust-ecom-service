@@ -4,19 +4,24 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
-#[sea_orm(table_name = "account")]
+#[sea_orm(table_name = "order_note")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false)]
-    pub id: Uuid,
-    pub name: String,
-    pub email: String,
-    pub password: String,
-    pub role: String,
+    #[sea_orm(primary_key)]
+    pub id: i32,
+    pub order_id: i32,
+    pub content: String,
+    pub creation_date: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::order::Entity")]
+    #[sea_orm(
+        belongs_to = "super::order::Entity",
+        from = "Column::OrderId",
+        to = "super::order::Column::Id",
+        on_update = "NoAction",
+        on_delete = "NoAction"
+    )]
     Order,
 }
 

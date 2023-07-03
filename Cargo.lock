@@ -1992,7 +1992,6 @@ dependencies = [
  "http",
  "image",
  "jsonwebtoken",
- "lazy_static",
  "lemon-tree-core",
  "lemon-tree-plugins",
  "migration",

@@ -57,6 +57,7 @@ async fn start() -> anyhow::Result<()> {
     let app_state = Arc::new(AppState {
         db: conn.clone(),
         env: config.clone(),
+        message_channel: Default::default(),
     });
 
     let plugin_routers = load_plugin_routers(&app_state);

@@ -1,4 +1,4 @@
-use entity::product;
+use entity::order_item;
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -38,23 +38,14 @@ pub struct Item {
     pub price: f32,
 }
 
-#[derive(Clone, Serialize)]
-pub struct Order {
-    pub items: Vec<Item>,
-}
-
 pub struct OrderAdjustments {
     pub tax_rate: Decimal,
     pub shipping_fee: Decimal,
 }
 
 impl Invoice {
-    pub fn create(
-        order: &Order,
-        order_products: Vec<product::Model>,
-        adjustments: OrderAdjustments,
-    ) -> Self {
-        let subtotal = Self::calc_subtotal(&order, order_products);
+    pub fn create(order_products: Vec<order_item::Model>, adjustments: OrderAdjustments) -> Self {
+        let subtotal = Self::calc_subtotal(order_products);
         let taxes = Self::calc_taxes(&subtotal, &adjustments.tax_rate);
 
         Invoice {
@@ -66,10 +57,10 @@ impl Invoice {
         }
     }
 
-    fn calc_subtotal(order: &Order, order_products: Vec<product::Model>) -> Decimal {
+    fn calc_subtotal(order_products: Vec<order_item::Model>) -> Decimal {
         let mut subtotal = Decimal::from_f32(0.0).unwrap();
 
-        for item in &order.items {
+        for item in order_products {
             subtotal = subtotal + Decimal::from_i32(item.qty).unwrap();
         }
 
