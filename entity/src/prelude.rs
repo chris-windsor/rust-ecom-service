@@ -14,3 +14,4 @@ pub use super::product::Entity as Product;
 pub use super::product_attribute::Entity as ProductAttribute;
 pub use super::product_category::Entity as ProductCategory;
 pub use super::product_image::Entity as ProductImage;
+pub use super::stock::Entity as Stock;

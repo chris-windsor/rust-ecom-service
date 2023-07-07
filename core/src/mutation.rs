@@ -12,7 +12,6 @@ impl Mutation {
             name: ActiveValue::Set(new_data.name),
             description: ActiveValue::Set(new_data.description),
             price: ActiveValue::Set(new_data.price),
-            stock: ActiveValue::Set(new_data.stock),
             ..Default::default()
         }
         .save(db)
@@ -35,7 +34,6 @@ impl Mutation {
             name: ActiveValue::Set(new_data.name),
             description: ActiveValue::Set(new_data.description),
             price: ActiveValue::Set(new_data.price),
-            stock: ActiveValue::Set(new_data.stock),
             ..Default::default()
         }
         .update(db)

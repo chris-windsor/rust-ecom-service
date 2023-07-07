@@ -14,7 +14,6 @@ pub struct FilteredSimpleProduct {
     pub short_url: String,
     pub name: String,
     pub price: f32,
-    pub stock: i32,
     pub img: String,
 }
 
@@ -26,7 +25,6 @@ pub struct FilteredProduct {
     pub name: String,
     pub description: String,
     pub price: f32,
-    pub stock: i32,
     pub img: String,
     pub categories: Vec<FilteredCategory>,
     pub attributes: Vec<FilteredProductAttribute>,

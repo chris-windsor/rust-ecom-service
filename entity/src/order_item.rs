@@ -9,9 +9,9 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub order_id: i32,
-    pub product_id: Uuid,
     pub price: Decimal,
     pub qty: i32,
+    pub shared_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -26,14 +26,6 @@ pub enum Relation {
     Order,
     #[sea_orm(has_many = "super::order_item_attribute::Entity")]
     OrderItemAttribute,
-    #[sea_orm(
-        belongs_to = "super::product::Entity",
-        from = "Column::ProductId",
-        to = "super::product::Column::Id",
-        on_update = "NoAction",
-        on_delete = "NoAction"
-    )]
-    Product,
 }
 
 impl Related<super::order::Entity> for Entity {
@@ -45,12 +37,6 @@ impl Related<super::order::Entity> for Entity {
 impl Related<super::order_item_attribute::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::OrderItemAttribute.def()
-    }
-}
-
-impl Related<super::product::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Product.def()
     }
 }
 

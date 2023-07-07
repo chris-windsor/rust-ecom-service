@@ -14,6 +14,7 @@ use lemon_tree_core::{
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde_json::json;
 use std::{convert::Infallible, sync::Arc, time::Duration};
+use uuid::Uuid;
 
 use crate::{
     authorize_net::{Address, ChargeCreditCardRequest, CreditCard},
@@ -89,6 +90,9 @@ pub async fn process_order(
         })?;
 
     let new_order = order::ActiveModel {
+        tax_amount: ActiveValue::Set(Decimal::from_f32(0.0).unwrap()),
+        shipping_amount: ActiveValue::Set(Decimal::from_f32(0.0).unwrap()),
+        total_amount: ActiveValue::Set(Decimal::from_f32(0.0).unwrap()),
         email: ActiveValue::Set(Some(req_order.customer_details.email_address.to_string())),
         billing_address_id: ActiveValue::Set(order_address.id),
         shipping_address_id: ActiveValue::Set(order_address.id),
@@ -96,7 +100,7 @@ pub async fn process_order(
         ..Default::default()
     };
 
-    Order::insert(new_order)
+    let new_order = Order::insert(new_order)
         .exec_with_returning(&data.db)
         .await
         .map_err(|e| {
@@ -106,6 +110,27 @@ pub async fn process_order(
             });
             (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
         })?;
+
+    for item in req_order.order_items {
+        let item = order_item::ActiveModel {
+            order_id: ActiveValue::Set(new_order.id),
+            shared_id: ActiveValue::Set(Uuid::parse_str(&item.id).unwrap()),
+            qty: ActiveValue::Set(item.qty),
+            price: ActiveValue::Set(Decimal::from_f32(0.0).unwrap()),
+            ..Default::default()
+        };
+
+        OrderItem::insert(item)
+            .exec_with_returning(&data.db)
+            .await
+            .map_err(|e| {
+                let error_response = serde_json::json!({
+                    "status": "fail",
+                    "message": format!("Database error: {}", e),
+                });
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+            })?;
+    }
 
     let auth_net_req = ChargeCreditCardRequest::create(&invoice, &customer)
         .await

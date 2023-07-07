@@ -32,7 +32,6 @@ fn filter_simple_product_record(
         short_url: product.short_url.to_string(),
         name: product.name.to_owned(),
         price: product.price.to_string().parse::<f32>().unwrap(),
-        stock: product.stock.to_owned(),
         img: match product_image {
             Some(image) => image.id.to_string(),
             None => String::from("unknown"),
@@ -52,12 +51,11 @@ fn filter_product_record(
     >,
 ) -> FilteredProduct {
     FilteredProduct {
-        id: product.id.to_string(),
+        id: product.shared_id.to_string(),
         short_url: product.short_url.to_string(),
         name: product.name.to_owned(),
         description: product.description.to_owned(),
         price: product.price.to_string().parse::<f32>().unwrap(),
-        stock: product.stock.to_owned(),
         img: match product_image {
             Some(image) => image.id.to_string(),
             None => String::from("unknown"),
@@ -245,14 +243,10 @@ pub async fn create_product(
         name: ActiveValue::set(req_product.name),
         description: ActiveValue::set(req_product.description),
         price: ActiveValue::set(Decimal::from_f32(req_product.price).unwrap()),
-        stock: ActiveValue::set(req_product.stock),
-        allow_backorder: ActiveValue::NotSet,
-        allow_restock_notifications: ActiveValue::NotSet,
         short_url: ActiveValue::set(req_product.short_url),
-        upc: ActiveValue::NotSet,
-        real_weight: ActiveValue::NotSet,
-        ship_weight: ActiveValue::NotSet,
-        parent_id: ActiveValue::NotSet,
+        shared_id: ActiveValue::set(Uuid::new_v4()),
+        active_revision: ActiveValue::set(true),
+        ..Default::default()
     };
 
     let product = Product::insert(new_product)

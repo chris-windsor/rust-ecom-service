@@ -11,7 +11,6 @@ pub struct Model {
     pub name: String,
     pub description: String,
     pub price: Decimal,
-    pub stock: i32,
     pub allow_backorder: Option<bool>,
     pub allow_restock_notifications: Option<bool>,
     pub short_url: String,
@@ -19,12 +18,12 @@ pub struct Model {
     pub real_weight: Option<i32>,
     pub ship_weight: Option<i32>,
     pub parent_id: Option<Uuid>,
+    pub shared_id: Uuid,
+    pub active_revision: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::order_item::Entity")]
-    OrderItem,
     #[sea_orm(
         belongs_to = "Entity",
         from = "Column::ParentId",
@@ -39,12 +38,6 @@ pub enum Relation {
     ProductCategory,
     #[sea_orm(has_many = "super::product_image::Entity")]
     ProductImage,
-}
-
-impl Related<super::order_item::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::OrderItem.def()
-    }
 }
 
 impl Related<super::product_attribute::Entity> for Entity {

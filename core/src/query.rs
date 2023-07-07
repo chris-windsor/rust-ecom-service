@@ -23,7 +23,6 @@ impl Query {
             .column(product::Column::ShortUrl)
             .column(product::Column::Name)
             .column(product::Column::Price)
-            .column(product::Column::Stock)
             .find_also_related(ProductImage)
             .order_by_asc(product::Column::Name)
             .paginate(db, posts_per_page);

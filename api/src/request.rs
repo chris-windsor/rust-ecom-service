@@ -62,7 +62,7 @@ pub struct PaymentDetails {
 
 pub struct OrderItem {
     pub id: Arc<str>,
-    pub qty: u32,
+    pub qty: i32,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
