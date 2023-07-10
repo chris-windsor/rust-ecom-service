@@ -1,5 +1,3 @@
-mod authorize_net;
-mod ecommerce;
 mod email;
 mod jwt;
 mod model;
@@ -17,6 +15,7 @@ use http::{
     HeaderValue, Method,
 };
 use lemon_tree_core::{
+    payment_processing::manager::{get_payment_processor, PaymentProcessor},
     sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr},
     AppState, Config,
 };
@@ -58,6 +57,7 @@ async fn start() -> anyhow::Result<()> {
         db: conn.clone(),
         env: config.clone(),
         message_channel: Default::default(),
+        payment_processor: get_payment_processor(),
     });
 
     let plugin_routers = load_plugin_routers(&app_state);

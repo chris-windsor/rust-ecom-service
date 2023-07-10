@@ -8,20 +8,21 @@ use entity::{prelude::*, *};
 use futures::Stream;
 use http::StatusCode;
 use lemon_tree_core::{
+    ecommerce::{Customer, Invoice, OrderAdjustments},
+    payment_processing::{
+        authorize_net::{Address, CreditCard},
+        manager::ChargeCreditCardRequest,
+    },
     sea_orm::{ActiveValue, EntityTrait},
     AppState,
 };
+use rand::Rng;
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde_json::json;
 use std::{convert::Infallible, sync::Arc, time::Duration};
 use uuid::Uuid;
 
-use crate::{
-    authorize_net::{Address, ChargeCreditCardRequest, CreditCard},
-    ecommerce::{Customer, Invoice, OrderAdjustments},
-    priveleges::check_admin,
-    request::NewOrder,
-};
+use crate::{priveleges::check_admin, request::NewOrder};
 
 pub async fn process_order(
     State(data): State<Arc<AppState>>,
@@ -132,12 +133,27 @@ pub async fn process_order(
             })?;
     }
 
-    let auth_net_req = ChargeCreditCardRequest::create(&invoice, &customer)
+    let transaction_req = ChargeCreditCardRequest {
+        transaction_amount: 1000,
+        order_number: rand::thread_rng().gen_range(1000..10000).to_string().into(),
+        customer: customer.clone(),
+        invoice: invoice.clone(),
+    };
+
+    let transaction_req = data
+        .payment_processor
+        .charge_card(transaction_req)
         .await
-        .unwrap();
+        .map_err(|e| {
+            let error_response = serde_json::json!({
+                "status": "fail",
+                "message": format!("Transaction processing error: {}", e),
+            });
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+        })?;
 
     Ok(Json(
-        json!({ "invoice": json!(invoice), "transaction": json!(auth_net_req) }),
+        json!({ "invoice": json!(invoice), "transaction": json!(transaction_req) }),
     ))
 }
 

@@ -9,3 +9,9 @@ members = [".", "api", "core", "entity", "migration", "plugins"]
 
 [dependencies]
 lemon-tree-api = { path = "api" }
+lemon-tree-core = { path = "core" }
+
+[features]
+authorize_net = ["lemon-tree-core/authorize_net"]
+fortis_pay = ["lemon-tree-core/fortis_pay"]
+stripe = ["lemon-tree-core/stripe"]

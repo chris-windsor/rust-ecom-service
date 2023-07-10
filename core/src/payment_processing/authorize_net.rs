@@ -1,15 +1,13 @@
+use async_trait::async_trait;
 use rand::Rng;
 use reqwest::header::CONTENT_TYPE;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::env;
 use std::sync::Arc;
 
-use crate::ecommerce::{Customer, Invoice};
-
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ChargeCreditCardRequest {
+struct ChargeCreditCardRequest {
     create_transaction_request: CreateTransactionRequest,
 }
 
@@ -57,7 +55,7 @@ struct AuthorizationIndicatorType {
     authorization_indicator: Arc<str>,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Address {
     pub first_name: Arc<str>,
@@ -88,7 +86,7 @@ struct Payment {
     credit_card: CreditCard,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CreditCard {
     pub card_number: Arc<str>,
@@ -142,7 +140,7 @@ struct UserField {
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ChargeCreditCardResponse {
+struct ChargeCreditCardResponse {
     transaction_response: TransactionResponse,
     pub ref_id: Arc<str>,
     messages: TransactionResponseResultMessages,
@@ -190,11 +188,35 @@ struct TransactionResponseMessage {
     description: Arc<str>,
 }
 
-impl ChargeCreditCardRequest {
-    pub async fn create(
-        invoice: &Invoice,
-        customer: &Customer,
-    ) -> Result<ChargeCreditCardResponse, Box<dyn std::error::Error>> {
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ErrorResponse {
+    messages: ErrorResponseMessages,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ErrorResponseMessages {
+    result_code: Arc<str>,
+    message: Vec<ErrorResponseMessage>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ErrorResponseMessage {
+    code: Arc<str>,
+    text: Arc<str>,
+}
+
+#[derive(Clone)]
+pub struct AuthorizeNetProcessor;
+
+#[async_trait]
+impl super::manager::PaymentProcessor for AuthorizeNetProcessor {
+    async fn charge_card(
+        &self,
+        request: super::manager::ChargeCreditCardRequest,
+    ) -> Result<super::manager::ChargeCreditCardResponse, Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
 
         let merchant_id =
@@ -202,13 +224,13 @@ impl ChargeCreditCardRequest {
         let transaction_key = env::var("AUTH_NET_TRANSACTION_KEY")
             .expect("Could not find AUTH_NET_TRANSACTION_KEY in .env");
 
-        let ref_id = invoice.id.to_string();
+        let ref_id = request.invoice.id.to_string();
         let transaction_type = "authCaptureTransaction";
-        let transaction_total = invoice.total.to_string();
+        let transaction_total = request.invoice.total.to_string();
 
-        let taxes = invoice.get_taxes();
-        let duties = invoice.get_duty();
-        let shipping_fees = invoice.get_shipping();
+        let taxes = request.invoice.get_taxes();
+        let duties = request.invoice.get_duty();
+        let shipping_fees = request.invoice.get_shipping();
 
         let po_number = rand::thread_rng().gen_range(0..100000).to_string();
         let customer_id = "";
@@ -225,9 +247,9 @@ impl ChargeCreditCardRequest {
                     amount: transaction_total.into(),
                     payment: Payment {
                         credit_card: CreditCard {
-                            card_code: customer.credit_card.card_code.clone(),
-                            card_number: customer.credit_card.card_number.clone(),
-                            expiration_date: customer.credit_card.expiration_date.clone(),
+                            card_code: request.customer.credit_card.card_code.clone(),
+                            card_number: request.customer.credit_card.card_number.clone(),
+                            expiration_date: request.customer.credit_card.expiration_date.clone(),
                         },
                     },
                     line_items: vec![],
@@ -238,9 +260,9 @@ impl ChargeCreditCardRequest {
                     customer: AuthorizeNetCustomer {
                         id: customer_id.into(),
                     },
-                    bill_to: customer.billing_address.clone(),
-                    ship_to: customer.shipping_address.clone(),
-                    customer_ip: customer.ip_address.clone(),
+                    bill_to: request.customer.billing_address.clone(),
+                    ship_to: request.customer.shipping_address.clone(),
+                    customer_ip: request.customer.ip_address.clone(),
                     // transaction_settings: TransactionSettings {
                     //     setting: TransactionSetting {
                     //         setting_name: "".into(),
@@ -263,8 +285,6 @@ impl ChargeCreditCardRequest {
             },
         };
 
-        println!("{:#?}", json!(charge_request));
-
         let response = client
             .post("https://apitest.authorize.net/xml/v1/request.api")
             .header(CONTENT_TYPE, "application/json")
@@ -274,12 +294,12 @@ impl ChargeCreditCardRequest {
             .text()
             .await?;
 
-        println!("{:#?}", response);
-
         // Authorize.NET returns a ZWSP at the start of the JSON response
         let response = response.replace("\u{feff}", "");
 
         let response: ChargeCreditCardResponse = serde_json::from_str(&response)?;
-        Ok(response)
+        Ok(super::manager::ChargeCreditCardResponse {
+            transaction_id: response.ref_id,
+        })
     }
 }

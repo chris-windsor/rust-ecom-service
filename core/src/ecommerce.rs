@@ -3,13 +3,13 @@ use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::authorize_net::{Address, AuthorizeNetFee, CreditCard};
+use crate::payment_processing::authorize_net::{Address, AuthorizeNetFee, CreditCard};
 
 pub struct Discount {
     amount: usize,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Invoice {
     pub id: u32,
     pub subtotal: Decimal,
@@ -18,7 +18,7 @@ pub struct Invoice {
     pub total: Decimal,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Customer {
     pub first_name: Arc<str>,
