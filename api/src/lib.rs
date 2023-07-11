@@ -21,7 +21,9 @@ use lemon_tree_core::{
 };
 use lemon_tree_plugins::load_plugin_routers;
 use migration::{Migrator, MigratorTrait};
-use route::{create_auth_router, create_order_router, create_product_router};
+use route::{
+    create_auth_router, create_content_router, create_order_router, create_product_router,
+};
 use std::{collections::HashMap, env, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use tower::ServiceBuilder;
@@ -64,7 +66,8 @@ async fn start() -> anyhow::Result<()> {
 
     let mut app = create_auth_router(&app_state)
         .merge(create_product_router(&app_state))
-        .merge(create_order_router(&app_state));
+        .merge(create_order_router(&app_state))
+        .merge(create_content_router(&app_state));
 
     // TODO: improve builder of app
     for router in plugin_routers {

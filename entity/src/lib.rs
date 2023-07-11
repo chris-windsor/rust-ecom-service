@@ -16,4 +16,5 @@ pub mod product;
 pub mod product_attribute;
 pub mod product_category;
 pub mod product_image;
+pub mod static_page;
 pub mod stock;

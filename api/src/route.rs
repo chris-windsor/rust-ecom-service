@@ -5,6 +5,7 @@ use crate::{
             change_password_handler, get_me_handler, inquire_password_reset_handler,
             login_user_handler, logout_handler, register_user_handler,
         },
+        content::content_page,
         orders::{list_orders, live_order_events, process_order},
         product::{
             all_products, create_attribute, create_category, create_product, list_attributes,
@@ -101,5 +102,11 @@ pub fn create_order_router(app_state: &Arc<AppState>) -> Router {
             get(live_order_events)
                 .route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
         )
+        .with_state(app_state.to_owned())
+}
+
+pub fn create_content_router(app_state: &Arc<AppState>) -> Router {
+    Router::new()
+        .route("/api/content", get(content_page))
         .with_state(app_state.to_owned())
 }
