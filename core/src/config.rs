@@ -5,6 +5,7 @@ pub struct Config {
     pub jwt_secret: String,
     pub jwt_expiry: i64,
     pub web_host: String,
+    pub api_port: u16,
 }
 
 impl Config {
@@ -14,12 +15,14 @@ impl Config {
         let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET is not set");
         let jwt_expiry = std::env::var("JWT_EXPIRY").expect("JWT_EXPIRY is not set");
         let web_host = std::env::var("WEB_HOST").expect("WEB_HOST is not set");
+        let api_port = std::env::var("API_PORT").expect("API_PORT is not set");
         Config {
             database_url,
             database_name,
             jwt_secret,
-            jwt_expiry: jwt_expiry.parse::<i64>().unwrap(),
+            jwt_expiry: jwt_expiry.parse().unwrap(),
             web_host,
+            api_port: api_port.parse().unwrap(),
         }
     }
 }

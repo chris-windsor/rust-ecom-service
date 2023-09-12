@@ -15,7 +15,7 @@ use http::{
     HeaderValue, Method,
 };
 use lemon_tree_core::{
-    payment_processing::manager::{get_payment_processor, PaymentProcessor},
+    payment_processing::manager::get_payment_processor,
     sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr},
     AppState, Config,
 };
@@ -82,7 +82,7 @@ async fn start() -> anyhow::Result<()> {
         )
         .layer(cors);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 4567));
+    let addr = SocketAddr::from(([127, 0, 0, 1], config.api_port));
     Server::bind(&addr).serve(app.into_make_service()).await?;
 
     Ok(())
