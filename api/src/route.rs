@@ -19,7 +19,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use lemon_tree_core::AppState;
+use rust_ecom_service_core::AppState;
 use std::sync::Arc;
 
 pub fn create_auth_router(app_state: &Arc<AppState>) -> Router {

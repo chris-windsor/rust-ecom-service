@@ -20,11 +20,11 @@ use axum::{
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use entity::{prelude::*, *};
 use jsonwebtoken::{encode, EncodingKey, Header};
-use lemon_tree_core::{
+use rand_core::OsRng;
+use rust_ecom_service_core::{
     sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, QueryFilter},
     AppState,
 };
-use rand_core::OsRng;
 use serde_json::json;
 use std::sync::Arc;
 use uuid::Uuid;

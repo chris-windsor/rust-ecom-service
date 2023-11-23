@@ -1,12 +1,12 @@
 [package]
-name = "lemon-tree-api"
+name = "rust-ecom-service-api"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [dependencies]
-lemon-tree-core = { path = "../core" }
-lemon-tree-plugins = { path = "../plugins" }
+rust-ecom-service-core = { path = "../core" }
+rust-ecom-service-plugins = { path = "../plugins" }
 anyhow = "1.0.66"
 argon2 = "0.5.0"
 async-stream = "0.3.5"

@@ -5,7 +5,7 @@ use axum::{
 };
 use entity::{prelude::*, *};
 use http::StatusCode;
-use lemon_tree_core::{
+use rust_ecom_service_core::{
     sea_orm::{ColumnTrait, EntityTrait, QueryFilter},
     AppState,
 };

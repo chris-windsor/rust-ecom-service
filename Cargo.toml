@@ -1,5 +1,5 @@
 [package]
-name = "lemon-tree"
+name = "rust-ecom-service"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -8,10 +8,10 @@ publish = false
 members = [".", "api", "core", "entity", "migration", "plugins"]
 
 [dependencies]
-lemon-tree-api = { path = "api" }
-lemon-tree-core = { path = "core" }
+rust-ecom-service-api = { path = "api" }
+rust-ecom-service-core = { path = "core" }
 
 [features]
-authorize_net = ["lemon-tree-core/authorize_net"]
-fortis_pay = ["lemon-tree-core/fortis_pay"]
-stripe = ["lemon-tree-core/stripe"]
+authorize_net = ["rust-ecom-service-core/authorize_net"]
+fortis_pay = ["rust-ecom-service-core/fortis_pay"]
+stripe = ["rust-ecom-service-core/stripe"]

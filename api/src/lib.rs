@@ -14,16 +14,16 @@ use http::{
     header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     HeaderValue, Method,
 };
-use lemon_tree_core::{
-    payment_processing::manager::get_payment_processor,
-    sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr},
-    AppState, Config,
-};
-use lemon_tree_plugins::load_plugin_routers;
 use migration::{Migrator, MigratorTrait};
 use route::{
     create_auth_router, create_content_router, create_order_router, create_product_router,
 };
+use rust_ecom_service_core::{
+    payment_processing::manager::get_payment_processor,
+    sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr},
+    AppState, Config,
+};
+use rust_ecom_service_plugins::load_plugin_routers;
 use std::{collections::HashMap, env, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use tower::ServiceBuilder;

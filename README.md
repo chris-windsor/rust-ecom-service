@@ -1,3 +1,3 @@
-# Lemon Tree 
+# rust-ecom-service
 
-ecommerce platform backend built with Axum
+e-commerce backend. recommended to use with [svelte-ecom](https://github.com/chris-windsor/svelte-ecom)

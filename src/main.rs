@@ -1,3 +1,3 @@
 fn main() {
-    lemon_tree_api::main();
+    rust_ecom_service_api::main();
 }

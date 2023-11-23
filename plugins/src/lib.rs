@@ -1,5 +1,5 @@
 use axum::Router;
-use lemon_tree_core::AppState;
+use rust_ecom_service_core::AppState;
 use std::sync::Arc;
 
 // Pull in other modules from the plugins directory

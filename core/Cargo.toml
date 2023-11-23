@@ -1,5 +1,5 @@
 [package]
-name = "lemon-tree-core"
+name = "rust-ecom-service-core"
 version = "0.1.0"
 edition = "2021"
 
