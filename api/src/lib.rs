@@ -82,19 +82,15 @@ async fn start() -> anyhow::Result<()> {
         )
         .layer(cors);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], config.api_port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], config.api_port));
     Server::bind(&addr).serve(app.into_make_service()).await?;
 
     Ok(())
 }
 
 async fn establish_db_conection(config: &Config) -> Result<DatabaseConnection, DbErr> {
-    let full_database_url = format!(
-        "{}{}",
-        config.database_url.to_owned(),
-        config.database_name.to_owned()
-    );
-    let mut opt = ConnectOptions::new(full_database_url);
+    let database_url = config.database_url.to_owned();
+    let mut opt = ConnectOptions::new(database_url);
     opt.max_connections(100)
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))
