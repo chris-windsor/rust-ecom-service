@@ -12,19 +12,13 @@ pub struct FilteredUser {
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct FilteredSimpleProduct {
     pub short_url: String,
-    pub name: String,
-    pub price: f32,
     pub img: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct FilteredProduct {
-    pub id: String,
     pub short_url: String,
-    pub name: String,
-    pub description: String,
-    pub price: f32,
     pub img: String,
     pub categories: Vec<FilteredCategory>,
     pub attributes: Vec<FilteredProductAttribute>,

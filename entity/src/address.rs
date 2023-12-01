@@ -4,13 +4,20 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
-#[sea_orm(table_name = "static_page")]
+#[sea_orm(table_name = "address")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub slug: String,
-    pub title: String,
-    pub content: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub company: Option<String>,
+    pub street: String,
+    pub street2: Option<String>,
+    pub street3: Option<String>,
+    pub city: String,
+    pub state: String,
+    pub postal_code: String,
+    pub phone_number: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

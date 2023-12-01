@@ -11,23 +11,19 @@ use rand::Rng;
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use rust_ecom_service_core::{
     ecommerce::{Customer, Invoice, OrderAdjustments},
-    payment_processing::{
-        authorize_net::{Address, CreditCard},
-        manager::ChargeCreditCardRequest,
-    },
+    payment_processing::{authorize_net, manager::ChargeCreditCardRequest},
     sea_orm::{ActiveValue, EntityTrait},
     AppState,
 };
 use serde_json::json;
 use std::{convert::Infallible, sync::Arc, time::Duration};
-use uuid::Uuid;
 
 use crate::{priveleges::check_admin, request::NewOrder};
 
 pub async fn process_order(
     State(data): State<Arc<AppState>>,
     Json(req_order): Json<NewOrder>,
-) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, Json<serde_json::Value>)> {
     let processing_msg = format!("Processing order");
     data.message_channel
         .lock()
@@ -42,7 +38,7 @@ pub async fn process_order(
         },
     );
 
-    let customer_address = Address {
+    let customer_address = authorize_net::Address {
         first_name: req_order.customer_details.first_name.clone(),
         last_name: req_order.customer_details.last_name.clone(),
         company: "".into(),
@@ -61,14 +57,14 @@ pub async fn process_order(
         ip_address: "".into(),
         billing_address: customer_address.clone(),
         shipping_address: customer_address.clone(),
-        credit_card: CreditCard {
+        credit_card: authorize_net::CreditCard {
             card_number: req_order.payment_details.credit_card_number,
             expiration_date: req_order.payment_details.credit_card_expiry,
             card_code: req_order.payment_details.credit_card_cvv,
         },
     };
 
-    let order_billing_address = order_address::ActiveModel {
+    let order_billing_address = address::ActiveModel {
         first_name: ActiveValue::Set(customer.first_name.to_string()),
         last_name: ActiveValue::Set(customer.last_name.to_string()),
         street: ActiveValue::Set(customer_address.address.to_string()),
@@ -79,7 +75,7 @@ pub async fn process_order(
         ..Default::default()
     };
 
-    let order_address = OrderAddress::insert(order_billing_address)
+    let order_address = Address::insert(order_billing_address)
         .exec_with_returning(&data.db)
         .await
         .map_err(|e| {
@@ -94,7 +90,7 @@ pub async fn process_order(
         tax_amount: ActiveValue::Set(Decimal::from_f32(0.0).unwrap()),
         shipping_amount: ActiveValue::Set(Decimal::from_f32(0.0).unwrap()),
         total_amount: ActiveValue::Set(Decimal::from_f32(0.0).unwrap()),
-        email: ActiveValue::Set(Some(req_order.customer_details.email_address.to_string())),
+        email: ActiveValue::Set(req_order.customer_details.email_address.to_string()),
         billing_address_id: ActiveValue::Set(order_address.id),
         shipping_address_id: ActiveValue::Set(order_address.id),
         creation_date: ActiveValue::Set(Utc::now().naive_utc()),
@@ -115,7 +111,6 @@ pub async fn process_order(
     for item in req_order.order_items {
         let item = order_item::ActiveModel {
             order_id: ActiveValue::Set(new_order.id),
-            shared_id: ActiveValue::Set(Uuid::parse_str(&item.id).unwrap()),
             qty: ActiveValue::Set(item.qty),
             price: ActiveValue::Set(Decimal::from_f32(0.0).unwrap()),
             ..Default::default()
@@ -145,15 +140,16 @@ pub async fn process_order(
         .charge_card(transaction_req)
         .await
         .map_err(|e| {
-            let error_response = serde_json::json!({
+            let error_response = json!({
                 "status": "fail",
                 "message": format!("Transaction processing error: {}", e),
             });
             (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
         })?;
 
-    Ok(Json(
-        json!({ "invoice": json!(invoice), "transaction": json!(transaction_req) }),
+    Ok((
+        StatusCode::OK,
+        Json(json!({ "invoice": json!(invoice), "transaction": json!(transaction_req) })),
     ))
 }
 

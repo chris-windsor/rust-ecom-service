@@ -77,7 +77,6 @@ pub async fn register_user_handler(
         .map(|hash| hash.to_string())?;
 
     let new_user = account::ActiveModel {
-        id: ActiveValue::Set(Uuid::new_v4()),
         name: ActiveValue::Set(body.name.to_string()),
         email: ActiveValue::Set(body.email.to_string().to_ascii_lowercase()),
         password: ActiveValue::Set(hashed_password),
@@ -260,11 +259,10 @@ pub async fn change_password_handler(
     Json(body): Json<ResetPasswordSchema>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let mut other_state = state.lock().await;
-    let user_id: Uuid;
 
-    if let Some(value) = other_state.reset_tokens.get_token(&body.token) {
-        user_id = value.clone();
-    } else {
+    let user_id = other_state.reset_tokens.get_token(&body.token);
+
+    if user_id.is_none() {
         let error_response = serde_json::json!({
             "status": "fail",
             "message": "Invalid reset token provided",
@@ -285,7 +283,7 @@ pub async fn change_password_handler(
         .map(|hash| hash.to_string())?;
 
     let updated_account = account::ActiveModel {
-        id: ActiveValue::Set(user_id),
+        id: ActiveValue::Set(user_id.unwrap()),
         password: ActiveValue::Set(hashed_password),
         ..Default::default()
     };

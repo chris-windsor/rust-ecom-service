@@ -14,7 +14,6 @@ use http::{
     header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     HeaderValue, Method,
 };
-use migration::{Migrator, MigratorTrait};
 use route::{
     create_auth_router, create_content_router, create_order_router, create_product_router,
 };
@@ -28,7 +27,6 @@ use std::{collections::HashMap, env, net::SocketAddr, sync::Arc, time::Duration}
 use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tower_http::{add_extension::AddExtensionLayer, cors::CorsLayer};
-use uuid::Uuid;
 
 #[tokio::main]
 async fn start() -> anyhow::Result<()> {
@@ -43,7 +41,6 @@ async fn start() -> anyhow::Result<()> {
         Ok(connection) => connection,
         Err(error) => panic!("Error encountered while connecting to DB: {:?}", error),
     };
-    Migrator::up(&conn, None).await.unwrap();
 
     let cors = CorsLayer::new()
         .allow_origin(
@@ -112,16 +109,16 @@ pub struct State {
 
 #[derive(Default)]
 pub struct ResetTokenDB {
-    tokens: HashMap<String, Uuid>,
+    tokens: HashMap<String, i32>,
 }
 
 impl ResetTokenDB {
-    fn add_token(&mut self, token: String, email: Uuid) {
-        self.tokens.insert(token, email);
+    fn add_token(&mut self, token: String, user_id: i32) {
+        self.tokens.insert(token, user_id);
     }
 
-    fn get_token(&self, token: &String) -> Option<&Uuid> {
-        self.tokens.get(token)
+    fn get_token(&self, token: &String) -> Option<i32> {
+        self.tokens.get(token).copied()
     }
 
     fn remove_token(&mut self, token: &String) {

@@ -1,5 +1,5 @@
 use ::entity::{product, product::Entity as Product};
-use sea_orm::{prelude::Uuid, *};
+use sea_orm::*;
 
 pub struct Mutation;
 
@@ -9,9 +9,6 @@ impl Mutation {
         new_data: product::Model,
     ) -> Result<product::ActiveModel, DbErr> {
         product::ActiveModel {
-            name: ActiveValue::Set(new_data.name),
-            description: ActiveValue::Set(new_data.description),
-            price: ActiveValue::Set(new_data.price),
             ..Default::default()
         }
         .save(db)
@@ -20,7 +17,7 @@ impl Mutation {
 
     pub async fn update_product_by_id(
         db: &DbConn,
-        id: Uuid,
+        id: i32,
         new_data: product::Model,
     ) -> Result<product::Model, DbErr> {
         let post: product::ActiveModel = Product::find_by_id(id)
@@ -31,16 +28,13 @@ impl Mutation {
 
         product::ActiveModel {
             id: post.id,
-            name: ActiveValue::Set(new_data.name),
-            description: ActiveValue::Set(new_data.description),
-            price: ActiveValue::Set(new_data.price),
             ..Default::default()
         }
         .update(db)
         .await
     }
 
-    pub async fn delete_product(db: &DbConn, id: Uuid) -> Result<DeleteResult, DbErr> {
+    pub async fn delete_product(db: &DbConn, id: i32) -> Result<DeleteResult, DbErr> {
         let post: product::ActiveModel = Product::find_by_id(id)
             .one(db)
             .await?

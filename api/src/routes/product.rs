@@ -2,8 +2,7 @@ use crate::{
     priveleges::check_admin,
     request::{NewAttribute, NewCategory, NewProduct},
     response::{
-        FilteredAttribute, FilteredAttributeOption, FilteredCategory, FilteredProduct,
-        FilteredProductAttribute, FilteredSimpleProduct,
+        FilteredAttribute, FilteredAttributeOption, FilteredCategory, FilteredProductAttribute,
     },
     storage::{convert_image_to_webp, get_uploaded_images, upload_image},
 };
@@ -14,73 +13,12 @@ use axum::{
     Extension, Json,
 };
 use entity::{prelude::*, *};
-use rust_decimal::{prelude::FromPrimitive, Decimal};
 use rust_ecom_service_core::{
-    sea_orm::{ActiveValue, ColumnTrait, EntityTrait, QueryFilter},
-    AppState, Query as QueryCore,
+    sea_orm::{ActiveValue, EntityTrait},
+    AppState,
 };
 use serde::Deserialize;
-use serde_json::json;
 use std::{collections::HashSet, sync::Arc};
-use uuid::Uuid;
-
-fn filter_simple_product_record(
-    product: &product::Model,
-    product_image: Option<&product_image::Model>,
-) -> FilteredSimpleProduct {
-    FilteredSimpleProduct {
-        short_url: product.short_url.to_string(),
-        name: product.name.to_owned(),
-        price: product.price.to_string().parse::<f32>().unwrap(),
-        img: match product_image {
-            Some(image) => image.id.to_string(),
-            None => String::from("unknown"),
-        },
-    }
-}
-
-fn filter_product_record(
-    product: &product::Model,
-    product_image: Option<&product_image::Model>,
-    product_categories: Option<Vec<&category::Model>>,
-    product_attributes: Option<
-        Vec<(
-            entity::product_attribute::Model,
-            Vec<entity::attribute::Model>,
-        )>,
-    >,
-) -> FilteredProduct {
-    FilteredProduct {
-        id: product.shared_id.to_string(),
-        short_url: product.short_url.to_string(),
-        name: product.name.to_owned(),
-        description: product.description.to_owned(),
-        price: product.price.to_string().parse::<f32>().unwrap(),
-        img: match product_image {
-            Some(image) => image.id.to_string(),
-            None => String::from("unknown"),
-        },
-        categories: match product_categories {
-            Some(categories) => categories
-                .iter()
-                .map(|category| filter_category_record(category))
-                .collect::<Vec<_>>(),
-            None => vec![],
-        },
-        attributes: match product_attributes {
-            Some(attributes) => attributes
-                .iter()
-                .map(|category| {
-                    filter_product_attribute_record(
-                        &category.0,
-                        &category.1.get(0).as_ref().unwrap(),
-                    )
-                })
-                .collect::<Vec<_>>(),
-            None => vec![],
-        },
-    }
-}
 
 fn filter_attribute_option_record(
     attribute_option: &attribute_option::Model,
@@ -138,95 +76,14 @@ pub async fn all_products(
     state: State<Arc<AppState>>,
     Query(params): Query<ProductRetrievalParams>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    let page = params.page.unwrap_or(1);
-    let posts_per_page = params.posts_per_page.unwrap_or(10);
-
-    let (products, num_pages) = QueryCore::find_products_in_page(&state.db, page, posts_per_page)
-        .await
-        .map_err(|e| {
-            let error_response = serde_json::json!({
-                "status": "fail",
-                "message": format!("Database error: {}", e),
-            });
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-        })?;
-
-    let response = json!({"products": products.iter().map(|product_and_image| {
-        let (product, product_image): &(entity::product::Model, std::option::Option<entity::product_image::Model>) = product_and_image;
-        filter_simple_product_record(&product, product_image.as_ref())
-    }).collect::<Vec<FilteredSimpleProduct>>(), "pageCount": num_pages});
-
-    Ok(Json(response))
+    Ok(())
 }
 
 pub async fn list_product(
     State(data): State<Arc<AppState>>,
     Path(product_id): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    let product = Product::find()
-        .filter(product::Column::ShortUrl.eq(product_id))
-        .find_also_related(ProductImage)
-        .one(&data.db)
-        .await
-        .map_err(|e| {
-            let error_response = serde_json::json!({
-                "status": "fail",
-                "message": format!("Database error: {}", e),
-            });
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-        })?;
-
-    if let Some(product) = &product {
-        let (product, product_image): &(product::Model, Option<product_image::Model>) = product;
-
-        let product_categories = ProductCategory::find()
-            .filter(product_category::Column::ProductId.eq(product.id))
-            .find_also_related(Category)
-            .all(&data.db)
-            .await
-            .map_err(|e| {
-                let error_response = serde_json::json!({
-                    "status": "fail",
-                    "message": format!("Database error: {}", e),
-                });
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-            })?;
-
-        let filtered_categories = product_categories
-            .iter()
-            .map(|category| category.1.as_ref().unwrap())
-            .collect::<Vec<_>>();
-
-        let product_attributes = ProductAttribute::find()
-            .filter(product_attribute::Column::ProductId.eq(product.id))
-            .find_with_related(Attribute)
-            .all(&data.db)
-            .await
-            .map_err(|e| {
-                let error_response = serde_json::json!({
-                    "status": "fail",
-                    "message": format!("Database error: {}", e),
-                });
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-            })?;
-
-        let product = filter_product_record(
-            &product,
-            product_image.as_ref(),
-            Some(filtered_categories),
-            Some(product_attributes),
-        );
-
-        let product_response = json!({ "status": "success", "data": product });
-        Ok(Json(product_response))
-    } else {
-        let error_response = serde_json::json!({
-            "status": "fail",
-            "message": "Unable to locate a product with that ID",
-        });
-
-        Err((StatusCode::INTERNAL_SERVER_ERROR, Json(error_response)))
-    }
+    Ok(())
 }
 
 pub async fn create_product(
@@ -234,96 +91,7 @@ pub async fn create_product(
     State(data): State<Arc<AppState>>,
     Json(req_product): Json<NewProduct>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    if let Err(error) = check_admin(&user) {
-        return Err(error);
-    }
-
-    let new_product = product::ActiveModel {
-        id: ActiveValue::set(Uuid::new_v4()),
-        name: ActiveValue::set(req_product.name),
-        description: ActiveValue::set(req_product.description),
-        price: ActiveValue::set(Decimal::from_f32(req_product.price).unwrap()),
-        short_url: ActiveValue::set(req_product.short_url),
-        shared_id: ActiveValue::set(Uuid::new_v4()),
-        active_revision: ActiveValue::set(true),
-        ..Default::default()
-    };
-
-    let product = Product::insert(new_product)
-        .exec_with_returning(&data.db)
-        .await
-        .map_err(|e| {
-            let error_response = serde_json::json!({
-                "status": "fail",
-                "message": format!("Database error: {}", e),
-            });
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-        })?;
-
-    let product_image_hash = req_product.image_id;
-
-    let new_product_image = product_image::ActiveModel {
-        id: ActiveValue::Set(Uuid::parse_str(&product_image_hash).unwrap()),
-        product_id: ActiveValue::Set(product.id),
-        position: ActiveValue::Set(1),
-    };
-
-    let product_image = ProductImage::insert(new_product_image)
-        .exec_with_returning(&data.db)
-        .await
-        .map_err(|e| {
-            let error_response = serde_json::json!({
-                "status": "fail",
-                "message": format!("Database error: {}", e),
-            });
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-        })?;
-
-    for category in req_product.categories.into_iter() {
-        let new_product_category = product_category::ActiveModel {
-            id: ActiveValue::NotSet,
-            product_id: ActiveValue::set(product.id),
-            category_id: ActiveValue::set(i32::from_u32(category).unwrap()),
-        };
-
-        ProductCategory::insert(new_product_category)
-            .exec_with_returning(&data.db)
-            .await
-            .map_err(|e| {
-                let error_response = serde_json::json!({
-                    "status": "fail",
-                    "message": format!("Database error: {}", e),
-                });
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-            })?;
-    }
-
-    for attribute in req_product.attributes.into_iter() {
-        let new_product_attribute = product_attribute::ActiveModel {
-            id: ActiveValue::NotSet,
-            product_id: ActiveValue::set(product.id),
-            attribute_id: ActiveValue::set(i32::from_u32(attribute).unwrap()),
-            content: ActiveValue::set(String::from("")),
-        };
-
-        ProductAttribute::insert(new_product_attribute)
-            .exec_with_returning(&data.db)
-            .await
-            .map_err(|e| {
-                let error_response = serde_json::json!({
-                    "status": "fail",
-                    "message": format!("Database error: {}", e),
-                });
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-            })?;
-    }
-
-    let product_response = serde_json::json!({"status": "success","data": serde_json::json!({
-        // TODO: return back categories and attributes
-        "product": filter_product_record(&product, Some(&product_image), None, None)
-    })});
-
-    Ok(Json(product_response))
+    Ok(())
 }
 
 pub async fn upload_product_image(
@@ -461,10 +229,6 @@ pub async fn update_attribute(
     Path(attribute_id): Path<String>,
     Extension(user): Extension<account::Model>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    if let Err(error) = check_admin(&user) {
-        return Err(error);
-    }
-
     Ok(())
 }
 
@@ -489,10 +253,6 @@ pub async fn retrieve_category(
     Path(category_id): Path<String>,
     Extension(user): Extension<account::Model>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    if let Err(error) = check_admin(&user) {
-        return Err(error);
-    }
-
     Ok(())
 }
 
@@ -534,9 +294,5 @@ pub async fn update_category(
     Path(category_id): Path<String>,
     Extension(user): Extension<account::Model>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    if let Err(error) = check_admin(&user) {
-        return Err(error);
-    }
-
     Ok(())
 }
