@@ -41,8 +41,8 @@ impl MigrationTrait for Migration {
                     .col(
                         ColumnDef::new(Account::Id)
                             .integer()
-                            .not_null()
-                            .primary_key(),
+                            .primary_key()
+                            .auto_increment(),
                     )
                     .col(ColumnDef::new(Account::Name).string().not_null())
                     .col(ColumnDef::new(Account::Email).string().not_null())

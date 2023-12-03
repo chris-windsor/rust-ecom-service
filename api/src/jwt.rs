@@ -79,16 +79,8 @@ pub async fn auth<B>(
         return Err((StatusCode::UNAUTHORIZED, Json(json_error)));
     }
 
-    let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| {
-        let json_error = ErrorResponse {
-            status: "Authentication Error",
-            message: "Request provided an invalid tokenn".to_string(),
-        };
-        (StatusCode::UNAUTHORIZED, Json(json_error))
-    })?;
-
     let user = Account::find()
-        .filter(account::Column::Id.eq(user_id))
+        .filter(account::Column::Id.eq(claims.sub))
         .one(&data.db)
         .await
         .map_err(|e| {

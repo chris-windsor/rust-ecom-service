@@ -143,7 +143,7 @@ pub async fn login_user_handler(
     let iat = now.timestamp() as usize;
     let exp = (now + chrono::Duration::seconds(data.env.jwt_expiry)).timestamp() as usize;
     let claims: TokenClaims = TokenClaims {
-        sub: user.id.to_string(),
+        sub: user.id,
         exp,
         iat,
         name: user.name,
