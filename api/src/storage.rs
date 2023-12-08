@@ -1,5 +1,5 @@
+use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::Client;
-use aws_smithy_http::byte_stream::ByteStream;
 use axum::Json;
 use http::StatusCode;
 use image::{imageops, DynamicImage, GenericImageView};
@@ -65,7 +65,6 @@ pub async fn get_uploaded_images() -> Result<Vec<String>, (StatusCode, Json<serd
 
     let images = images
         .contents()
-        .unwrap()
         .into_iter()
         .map(|obj| String::from(obj.key().unwrap_or_default()))
         .collect::<Vec<String>>();

@@ -12,8 +12,13 @@ pub async fn send_password_reset_email(to: &String, content: &String) {
     let subject_content = Content::builder()
         .data("Password Reset Inquiry")
         .charset("UTF-8")
-        .build();
-    let body_content = Content::builder().data(content).charset("UTF-8").build();
+        .build()
+        .expect("Build subject");
+    let body_content = Content::builder()
+        .data(content)
+        .charset("UTF-8")
+        .build()
+        .expect("Build body");
     let body = Body::builder().html(body_content).build();
 
     let msg = Message::builder()
